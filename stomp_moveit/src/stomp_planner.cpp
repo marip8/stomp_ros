@@ -32,6 +32,10 @@
 #include <stomp_moveit/utils/kinematics.h>
 #include <stomp_moveit/utils/polynomial.h>
 
+
+#include <stomp_moveit/update_filters/trajectory_visualization.h>
+
+
 static const std::string DEBUG_NS = "stomp_planner";
 static const std::string DESCRIPTION = "STOMP";
 static const double TIMEOUT_INTERVAL = 0.5;
@@ -196,7 +200,6 @@ bool StompPlanner::solve(planning_interface::MotionPlanDetailedResponse &res)
   Eigen::MatrixXd initial_parameters;
   bool use_seed = getSeedParameters(initial_parameters);
 
-
   // create timeout timer
   ros::WallDuration allowed_time(request_.allowed_planning_time);
   ROS_WARN_COND(TIMEOUT_INTERVAL > request_.allowed_planning_time,
@@ -229,6 +232,12 @@ bool StompPlanner::solve(planning_interface::MotionPlanDetailedResponse &res)
       return false;
     }
 
+    // Display the initial trajectory
+    for (auto &p : task_->getVisualizations())
+    {
+      p->done(true, 0, 0.0, initial_parameters);
+    }
+
     stomp_->setConfig(config_copy);
     planning_success = stomp_->solve(initial_parameters, parameters);
   }
@@ -248,6 +257,12 @@ bool StompPlanner::solve(planning_interface::MotionPlanDetailedResponse &res)
     {
       res.error_code_.val = moveit_msgs::MoveItErrorCodes::FAILURE;
       return false;
+    }
+
+    // Display the initial trajectory
+    for (auto &p : task_->getVisualizations())
+    {
+      p->done(true, 0, 0.0, initial_parameters);
     }
 
     stomp_->setConfig(config_copy);
@@ -332,7 +347,7 @@ bool StompPlanner::getSeedParameters(Eigen::MatrixXd& parameters) const
   const auto* group = state.getJointModelGroup(group_);
   const auto& joint_names = group->getActiveJointModelNames();
   const auto& tool_link = group->getLinkModelNames().back();
-  Eigen::VectorXd start, goal;
+  Eigen::VectorXd start;
 
   // We check to see if the start state in the request and the seed state are 'close'
   if (moveit::core::robotStateMsgToRobotState(request_.start_state, state))
@@ -369,7 +384,7 @@ bool StompPlanner::getSeedParameters(Eigen::MatrixXd& parameters) const
 
   // We now extract the goal and make sure that the seed's goal obeys the goal constraints
   bool found_goal = false;
-  goal = parameters.rightCols(1); // initializing goal;
+  Eigen::VectorXd goal = parameters.rightCols(1); // initializing goal;
   for(auto& gc : request_.goal_constraints)
   {
     if(!gc.joint_constraints.empty())
@@ -409,9 +424,9 @@ bool StompPlanner::getSeedParameters(Eigen::MatrixXd& parameters) const
     }
 
     Eigen::VectorXd solution;
-    Eigen::VectorXd seed = start;
+//    Eigen::VectorXd seed = start;
     ik_solver_->setKinematicState(state);
-    if(ik_solver_->solve(seed,tool_constraints.get(),solution))
+    if(ik_solver_->solve(goal,tool_constraints.get(),solution))
     {
       goal = solution;
       found_goal = true;
@@ -722,7 +737,7 @@ bool StompPlanner::canServiceRequest(const moveit_msgs::MotionPlanRequest &req) 
   // check that we have joint or cartesian constraints at the goal
   const auto& gc = req.goal_constraints[0];
   if ((gc.joint_constraints.size() == 0) &&
-		  !utils::kinematics::isCartesianConstraints(gc))
+      !utils::kinematics::isCartesianConstraints(gc))
   {
     ROS_ERROR("STOMP couldn't find either a joint or cartesian goal.");
     return false;

@@ -118,7 +118,7 @@ bool MultiTrajectoryVisualization::initialize(moveit::core::RobotModelConstPtr r
   }
 
   // initializing publisher
-  viz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>(marker_topic_,1);
+  viz_pub_ = nh_.advertise<visualization_msgs::MarkerArray>(marker_topic_, 1, true);
 
   return true;
 }

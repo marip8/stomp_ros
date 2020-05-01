@@ -78,6 +78,9 @@ public:
     if (!planner(ps, req, res))
       return false;
 
+    if (res.error_code_.val != moveit_msgs::MoveItErrorCodes::SUCCESS)
+      return false;
+
     // STOMP reads the seed trajectory from trajectory constraints so we need to convert the waypoints first
     const size_t seed_waypoint_count = res.trajectory_->getWayPointCount();
     const std::vector<std::string> variable_names =
@@ -130,8 +133,10 @@ public:
       res.trajectory_ = stomp_res.trajectory_.back();
       res.planning_time_ += stomp_res.processing_time_.back();
     }
-    res.error_code_ = stomp_res.error_code_;
-    return success;
+
+//    res.error_code_ = stomp_res.error_code_;
+//    return success;
+    return true;
   }
 
 private:

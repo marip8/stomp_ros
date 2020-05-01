@@ -32,6 +32,7 @@ static const std::string COST_FUNCTIONS_FIELD = "cost_functions";
 static const std::string NOISY_FILTERS_FIELD = "noisy_filters";
 static const std::string UPDATE_FILTERS_FIELD = "update_filters";
 static const std::string NOISE_GENERATOR_FIELD = "noise_generator";
+static const std::string VISUALIZATION_FIELD = "visualization";
 
 /**
  * @brief Convenience method to load an array of STOMP plugins
@@ -238,6 +239,16 @@ StompOptimizationTask::StompOptimizationTask(
   {
     ROS_WARN("StompOptimizationTask/%s failed to load '%s' plugins from yaml",group_name.c_str(),UPDATE_FILTERS_FIELD.c_str());
   }
+
+  // loading filter plugins
+  plugin_data.param_key = VISUALIZATION_FIELD;
+  plugin_data.plugin_desc = "Visualization";
+  plugin_data.critical = false;
+  plugin_data.single_instance = false;
+  if(!loadPlugins(plugin_data,update_filter_loader_,visualizations_))
+  {
+    ROS_WARN("StompOptimizationTask/%s failed to load '%s' plugins from yaml",group_name.c_str(),VISUALIZATION_FIELD.c_str());
+  }
 }
 
 StompOptimizationTask::~StompOptimizationTask()
@@ -347,6 +358,15 @@ bool StompOptimizationTask::setMotionPlanRequest(const planning_scene::PlanningS
   }
 
   for(auto p: update_filters_)
+  {
+    if(!p->setMotionPlanRequest(planning_scene,req,config,error_code))
+    {
+      ROS_ERROR("Failed to set Plan Request on update filter %s",p->getName().c_str());
+      return false;
+    }
+  }
+
+  for(auto p: visualizations_)
   {
     if(!p->setMotionPlanRequest(planning_scene,req,config,error_code))
     {

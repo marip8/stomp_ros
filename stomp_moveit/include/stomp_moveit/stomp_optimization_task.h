@@ -197,6 +197,11 @@ public:
    */
   virtual void done(bool success,int total_iterations,double final_cost,const Eigen::MatrixXd& parameters) override;
 
+  std::vector<update_filters::StompUpdateFilterPtr> getVisualizations() const
+  {
+    return visualizations_;
+  }
+
 protected:
 
   // robot environment
@@ -215,6 +220,7 @@ protected:
   std::vector<noisy_filters::StompNoisyFilterPtr> noisy_filters_;
   std::vector<update_filters::StompUpdateFilterPtr> update_filters_;
   std::vector<noise_generators::StompNoiseGeneratorPtr> noise_generators_;
+  std::vector<update_filters::StompUpdateFilterPtr> visualizations_;
 };
 
 
